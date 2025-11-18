@@ -116,9 +116,9 @@ async function compressToTarget(canvas: HTMLCanvasElement, targetBytes: number):
 export default function ImageCropper() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [fileName, setFileName] = useState("image");
-  const [frameW, setFrameW] = useState(640);
-  const [frameH, setFrameH] = useState(840);
-  const [aspect, setAspect] = useState(640 / 840);
+  const [frameW, setFrameW] = useState(165);
+  const [frameH, setFrameH] = useState(185);
+  const [aspect, setAspect] = useState(165 / 185);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [zoomSliderValue, setZoomSliderValue] = useState(0);
@@ -276,7 +276,7 @@ export default function ImageCropper() {
     setFrameH(height);
     setAspect(width / height);
   };
-  const presetPortrait = () => applyPreset(640, 840);
+  const presetPortrait = () => applyPreset(165, 185);
   const presetPassportPage = () => applyPreset(1733, 2389);
   const presetA4 = () => applyPreset(1733, 2389);
 
@@ -516,7 +516,7 @@ export default function ImageCropper() {
             تطبيق الأبعاد
           </button>
           <button className="btn ghost" onClick={presetPortrait}>
-            📸 صورة شخصية (640×840)
+            📸 صورة شخصية (165×185)
           </button>
           <button className="btn ghost" onClick={presetPassportPage}>
             📸 صفحة جواز سفر(1733×2389)

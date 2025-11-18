@@ -342,15 +342,15 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
   const [isStageDragOver, setIsStageDragOver] = useState(false);
   
   // أبعاد الفريم الافتراضية (جواز السفر الجديد)
-  const [frameW1, setFrameW1] = useState(640);
-  const [frameH1, setFrameH1] = useState(840);
-  const [frameW2, setFrameW2] = useState(640);
-  const [frameH2, setFrameH2] = useState(840);
-  const [frameW3, setFrameW3] = useState(640);
-  const [frameH3, setFrameH3] = useState(840);
-  const [aspect1, setAspect1] = useState(640 / 840);
-  const [aspect2, setAspect2] = useState(640 / 840);
-  const [aspect3, setAspect3] = useState(640 / 840);
+  const [frameW1, setFrameW1] = useState(1593);
+  const [frameH1, setFrameH1] = useState(2180);
+  const [frameW2, setFrameW2] = useState(1593);
+  const [frameH2, setFrameH2] = useState(2180);
+  const [frameW3, setFrameW3] = useState(1593);
+  const [frameH3, setFrameH3] = useState(2180);
+  const [aspect1, setAspect1] = useState(1593 / 2180);
+  const [aspect2, setAspect2] = useState(1593 / 2180);
+  const [aspect3, setAspect3] = useState(1593 / 2180);
 
   const resetView = useCallback(() => {
     setZoom(1);
