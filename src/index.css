@@ -1,0 +1,317 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap");
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: "Cairo", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  background: #0b1220; /* داكن رايق */
+  color: #e6eef7;
+  direction: rtl;
+}
+
+/* تخطيط أساسي: يسار المعاينة – يمين الأدوات */
+.page {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  height: 100%;
+}
+
+/* منطقة القص */
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(1200px 800px at 50% 40%, #1b2437, #0f1729);
+  border-left: 1px solid #10192b;
+}
+
+.dropzone {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9fb3ce;
+  border: 2px dashed #2a3853;
+  margin: 24px;
+  border-radius: 14px;
+  background: rgba(16, 25, 43, 0.35);
+  cursor: pointer;
+  transition: 0.25s;
+}
+.dropzone:hover { border-color: #42b7ff; color: #cfe9ff; }
+
+/* سلايدر التدوير أسفل المعاينة */
+.bottom-rotator {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  padding: 12px 16px;
+  margin: 8px 0 12px;
+  user-select: none;
+  z-index: 1;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  background: rgba(11, 18, 32, 0.65);
+  border: 1px solid #182339;
+  border-radius: 12px;
+}
+.bottom-rotator .ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: right;
+}
+.bottom-rotator .ctrl label {
+  font-size: 13px;
+  color: #9fb3ce;
+}
+.bottom-rotator .ctrl input[type="range"] {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  background: #22324b;
+  border-radius: 8px;
+  outline: none;
+}
+.bottom-rotator .ctrl input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #42b7ff;
+  box-shadow: 0 0 0 3px rgba(66,183,255,.15);
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+.bottom-rotator .ctrl input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+.ctrl-val {
+  font-size: 12px;
+  color: #8fb9ff;
+}
+
+/* لوحة التحكم */
+.panel {
+  background: #0f1729;
+  border-left: 1px solid #10192b;
+  padding: 22px 18px;
+  overflow-y: auto;
+}
+.panel h2 {
+  margin: 0 0 14px;
+  color: #25d099;
+  letter-spacing: .3px;
+  text-align: center;
+}
+
+/* صندوق الرفع */
+.upload-box {
+  border: 1.5px dashed #28405f;
+  border-radius: 12px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8aa2bf;
+  cursor: pointer;
+  margin-bottom: 16px;
+  background: #0b1220;
+  transition: 0.25s;
+}
+.upload-box:hover { border-color: #42b7ff; color: #cfe9ff; }
+.upload-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+/* مجموعات الإدخال */
+.group { margin-bottom: 14px; }
+.group label { display: block; margin-bottom: 6px; color: #b8c7dc; font-size: 14px; }
+.text, .num, select, input[type="range"] {
+  width: 100%;
+  background: #0b1220;
+  color: #e6eef7;
+  border: 1px solid #203049;
+  border-radius: 10px;
+  padding: 9px 10px;
+  outline: none;
+  transition: 0.2s;
+}
+.text:focus, .num:focus, select:focus { border-color: #42b7ff; box-shadow: 0 0 0 3px rgba(66,183,255,.12); }
+
+/* إجبار عرض الأرقام بالإنجليزية دائماً */
+.num, input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+  direction: ltr;
+  text-align: left;
+  font-family: "Courier New", Courier, monospace;
+}
+
+input[type="range"] {
+  accent-color: #42b7ff;
+  height: 6px;
+  padding: 0;
+  background: #22324b;
+}
+
+/* صفين */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* أزرار */
+.btn-row { display: flex; gap: 10px; margin: 10px 0 14px; flex-wrap: wrap; }
+.btn {
+  flex: 1;
+  background: #2a74ff;
+  border: none;
+  color: white;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: .2s ease;
+}
+.btn:hover { background: #255eea; }
+.btn.success { background: #22c55e; }
+.btn.success:hover { background: #16a34a; }
+.btn.ghost {
+  background: transparent;
+  color: #cfe9ff;
+  border: 1px solid #28405f;
+}
+.btn.ghost:hover { border-color: #42b7ff; color: white; }
+
+/* المعاينة النهائية */
+.preview { margin-top: 6px; }
+.pv-head {
+  display: flex; align-items: baseline; gap: 8px;
+  color: #cfe9ff; margin-bottom: 6px;
+}
+.pv-box {
+  background: #0b1220;
+  border: 1px solid #203049;
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+}
+.pv-box img {
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  display: block;
+  margin: 0 auto;
+}
+.pv-empty { color: #7892b3; font-size: 13px; }
+
+/* ===== إصلاحات السحب (Dragging) بدون تغيير الثيم ===== */
+
+/* اجعل .stage عمود: الفريم بالأعلى والسلايدر أسفله */
+.stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;          /* مهم لإعطاء ارتفاع حقيقي */
+}
+
+/* حاوية الكروبر تملأ كامل المساحة المتبقية */
+.crop-container {
+  position: relative;
+  flex: 1 1 auto;        /* تملأ المساحة */
+  min-height: 0;         /* يمنع الانكماش داخل flex */
+  width: 100%;
+  z-index: 2;            /* فوق أي طبقات أخرى داخل stage */
+  touch-action: none;    /* يسمح بالسحب على اللمس */
+}
+
+/* تأكيد أن عنصر react-easy-crop نفسه يملأ الحاوية */
+.crop-container > div,
+.reactEasyCrop_Container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* السلايدر أسفل الفريم ضمن التدفق، ولا يغطي منطقة القص */
+.bottom-rotator {
+  position: relative;    /* كان absolute في نسخ سابقة */
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  padding: 8px 16px;
+  margin: 8px 0 12px;
+  text-align: center;
+  user-select: none;
+  z-index: 1;            /* أقل من الكروبر */
+  pointer-events: auto;  /* لا يمنع سحب الصورة */
+}
+
+/* مؤشرات الفأرة (اختياري) */
+.reactEasyCrop_Container * { cursor: grab; }
+.reactEasyCrop_Container:active * { cursor: grabbing; }
+
+/* ضمان تسلسل الارتفاعات لأعلى الصفحة */
+html, body, #root, .page { height: 100%; }
+
+.dropzone.dragover {
+  border-color: #42b7ff;
+  background: rgba(66,183,255,0.1);
+  color: #cfe9ff;
+}
+
+.pdf-controls {
+  border: 1px solid #1f2f4a;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(10, 18, 32, 0.7);
+}
+.pdf-controls__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pdf-controls__slider input[type="range"] {
+  width: 100%;
+}
+.pdf-controls__info {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #9fb3ce;
+  text-align: center;
+}
+.pdf-controls__status {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #fbbf24;
+}
+.pdf-controls__error {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #f87171;
+}
+.pdf-preview {
+  margin-top: 10px;
+  border: 1px solid #203049;
+  border-radius: 10px;
+  padding: 6px;
+  background: #0b1220;
+  text-align: center;
+}
+.pdf-preview img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 8px;
+  object-fit: contain;
+}
