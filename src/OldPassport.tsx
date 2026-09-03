@@ -814,6 +814,7 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
 
       <aside className="panel">
         <h2>جواز سفر قديم 📕</h2>
+        <p>إنشاء المنسق محمد عليكاج تكتل المشاعر 1447هـ 2026م</p>
         <p>صفحتان على A4</p>
 
         <div className="group">

@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import ImageCropper from "./ImageCropper";
 import A4Page from "./A4Page";
 import PdfToJpeg from "./PdfToJpeg";
+import MrzReader from "./MrzReader";
+import MergeToPdf from "./MergeToPdf";
 import "./App.css";
 
 function Navigation() {
@@ -45,6 +47,26 @@ function Navigation() {
       >
         PDF إلى JPEG
       </Link>
+      <Link
+        to="/mrz"
+        style={{
+          color: location.pathname === "/mrz" ? "#42b7ff" : "#7892b3",
+          textDecoration: "none",
+          fontWeight: location.pathname === "/mrz" ? "bold" : "normal"
+        }}
+      >
+        قارئ بيانات الجواز (MRZ)
+      </Link>
+      <Link
+        to="/merge-pdf"
+        style={{
+          color: location.pathname === "/merge-pdf" ? "#42b7ff" : "#7892b3",
+          textDecoration: "none",
+          fontWeight: location.pathname === "/merge-pdf" ? "bold" : "normal"
+        }}
+      >
+        دمج ملفات وصور إلى PDF
+      </Link>
     </nav>
   );
 }
@@ -58,6 +80,8 @@ function App() {
           <Route path="/" element={<ImageCropper />} />
           <Route path="/a4" element={<A4Page />} />
           <Route path="/pdf-to-jpeg" element={<PdfToJpeg />} />
+          <Route path="/mrz" element={<MrzReader />} />
+          <Route path="/merge-pdf" element={<MergeToPdf />} />
         </Routes>
       </div>
     </BrowserRouter>

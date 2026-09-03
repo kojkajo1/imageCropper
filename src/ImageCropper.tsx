@@ -271,12 +271,20 @@ export default function ImageCropper() {
   };
 
   const applyFrame = () => setAspect(frameW / frameH);
-  const applyPreset = (width: number, height: number) => {
+  const applyPreset = (
+    width: number,
+    height: number,
+    targetSizeVal?: number,
+    unit?: "KB" | "MB"
+  ) => {
     setFrameW(width);
     setFrameH(height);
     setAspect(width / height);
+    if (targetSizeVal !== undefined) setTargetSize(targetSizeVal);
+    if (unit !== undefined) setSizeUnit(unit);
   };
-  const presetPortrait = () => applyPreset(165, 185);
+  const presetPortrait = () => applyPreset(165, 185, 18, "KB");
+  const presetLarge640 = () => applyPreset(640, 480, 1, "MB");
   const presetPassportPage = () => applyPreset(1733, 2389);
   const presetA4 = () => applyPreset(1733, 2389);
 
@@ -341,7 +349,7 @@ export default function ImageCropper() {
     const url = URL.createObjectURL(previewBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fileName}.jpg`;
+    a.download = `${fileName}-1.jpg`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -517,6 +525,9 @@ export default function ImageCropper() {
           </button>
           <button className="btn ghost" onClick={presetPortrait}>
             📸 صورة شخصية (165×185)
+          </button>
+          <button className="btn ghost" onClick={presetLarge640}>
+            📸 صورة (640×480)
           </button>
           <button className="btn ghost" onClick={presetPassportPage}>
             📸 صفحة جواز سفر(1733×2389)

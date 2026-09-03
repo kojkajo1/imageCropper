@@ -201,6 +201,7 @@ export default function PdfToJpeg() {
 
       <aside className="panel">
         <h2>تحويل PDF إلى JPEG 📄</h2>
+        <p>إنشاء المنسق محمد عليكاج تكتل المشاعر 1447هـ 2026م</p>
         <p>تحويل ملف PDF إلى صور JPEG بدقتها الأصلية</p>
 
         <input

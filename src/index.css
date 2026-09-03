@@ -315,3 +315,181 @@ html, body, #root, .page { height: 100%; }
   border-radius: 8px;
   object-fit: contain;
 }
+
+/* ===== قارئ MRZ ===== */
+.mrz-preview {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.mrz-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mrz-privacy-note {
+  font-size: 13px;
+  color: #8fb9ff;
+  background: rgba(66, 183, 255, 0.08);
+  border: 1px solid rgba(66, 183, 255, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 10px 0 16px;
+  text-align: right;
+}
+
+.mrz-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #9fb3ce;
+  font-size: 14px;
+  margin: 10px 0;
+}
+
+.mrz-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #22324b;
+  border-top-color: #42b7ff;
+  animation: mrz-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes mrz-spin {
+  to { transform: rotate(360deg); }
+}
+
+.mrz-error {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.mrz-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mrz-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  background: #0b1220;
+  border: 1px solid #203049;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.mrz-row-label {
+  color: #9fb3ce;
+  font-size: 13px;
+}
+
+.mrz-row-value {
+  color: #e6eef7;
+  font-family: "Courier New", Courier, monospace;
+  direction: ltr;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.mrz-copy-btn {
+  background: transparent;
+  border: 1px solid #28405f;
+  border-radius: 8px;
+  color: #cfe9ff;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  transition: 0.2s;
+}
+.mrz-copy-btn:hover:not(:disabled) {
+  border-color: #42b7ff;
+}
+.mrz-copy-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ===== دمج الملفات إلى PDF ===== */
+.merge-stage {
+  overflow-y: auto;
+}
+.merge-stage .dropzone {
+  height: auto;
+  min-height: 120px;
+  flex: 0 0 auto;
+}
+
+.merge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.merge-card {
+  position: relative;
+  background: #0f1729;
+  border: 1px solid #203049;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: grab;
+  transition: 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.merge-card:active { cursor: grabbing; }
+.merge-card:hover { border-color: #42b7ff; }
+
+.merge-card-index {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #2a74ff;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.merge-card img {
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  background: #0b1220;
+  border-radius: 8px;
+}
+
+.merge-card-label {
+  font-size: 11px;
+  color: #9fb3ce;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.merge-card-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
