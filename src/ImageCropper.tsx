@@ -127,7 +127,7 @@ export default function ImageCropper() {
   const [targetSliderRotation, setTargetSliderRotation] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [targetSize, setTargetSize] = useState(300);
+  const [targetSize, setTargetSize] = useState(18);
   const [sizeUnit, setSizeUnit] = useState<"KB" | "MB">("KB");
   const [finalSizeBytes, setFinalSizeBytes] = useState<number | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
@@ -284,7 +284,7 @@ export default function ImageCropper() {
     if (unit !== undefined) setSizeUnit(unit);
   };
   const presetPortrait = () => applyPreset(165, 185, 18, "KB");
-  const presetLarge640 = () => applyPreset(640, 480, 1, "MB");
+  const presetLarge640 = () => applyPreset(480, 640, 1, "MB");
   const presetPassportPage = () => applyPreset(1733, 2389);
   const presetA4 = () => applyPreset(1733, 2389);
 
@@ -527,7 +527,7 @@ export default function ImageCropper() {
             📸 صورة شخصية (165×185)
           </button>
           <button className="btn ghost" onClick={presetLarge640}>
-            📸 صورة (640×480)
+            📸 صورة (480×640)
           </button>
           <button className="btn ghost" onClick={presetPassportPage}>
             📸 صفحة جواز سفر(1733×2389)
