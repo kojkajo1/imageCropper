@@ -285,8 +285,8 @@ export default function ImageCropper() {
   };
   const presetPortrait = () => applyPreset(165, 185, 18, "KB");
   const presetLarge640 = () => applyPreset(480, 640, 1, "MB");
-  const presetPassportPage = () => applyPreset(1733, 2389);
-  const presetA4 = () => applyPreset(1733, 2389);
+  const presetPassportPage = () => applyPreset(1200, 1700, 1, "MB");
+  const presetA4 = () => applyPreset(1733, 2389, 1, "MB");
 
   useEffect(() => {
     const mapped = (zoom - 1) * 100;
@@ -530,7 +530,7 @@ export default function ImageCropper() {
             📸 صورة (480×640)
           </button>
           <button className="btn ghost" onClick={presetPassportPage}>
-            📸 صفحة جواز سفر(1733×2389)
+            📸 صفحة جواز سفر(1200×1700)
           </button>
           <button className="btn ghost" onClick={presetA4}>
             📸ورقة A4(1733×2389)
