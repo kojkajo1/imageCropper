@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import Cropper, { Area } from "react-easy-crop";
 import { usePdfSource } from "./hooks/usePdfSource";
 import PdfPageControls from "./PdfPageControls";
@@ -83,65 +83,37 @@ async function compressToTarget(canvas: HTMLCanvasElement, targetBytes: number):
       );
     });
 
-  try {
-    // محاولة أولى بجودة عالية جداً (0.98) للحفاظ على وضوح النص
-    const fullQuality = await encode(0.98);
-    if (fullQuality.size <= targetBytes) return fullQuality;
+  // الهدف: أعلى جودة ممكنة بحجم أقل صراحةً من targetBytes (Strictly <) — لا يساوي ولا يتجاوز.
+  // حد أدنى للجودة (60%) للحفاظ على وضوح النص والصورة، حتى لو تطلّب الأمر تجاوز الحجم
+  // المطلوب بحالات نادرة جداً (صفحة A4 كبيرة/معقدة جداً بالنسبة للحجم المطلوب).
+  const MIN_QUALITY = 0.6;
+  let low = MIN_QUALITY;
+  let high = 0.98;
+  let bestBlob: Blob | null = null;
 
-    // البحث الثنائي للجودة المثلى - بدء من جودة عالية للحفاظ على وضوح النص
-    // الهدف: إيجاد أعلى جودة بحجم <= targetBytes
-    let low = 0.7; // الحد الأدنى للجودة
-    let high = 0.98; // الحد الأعلى للجودة
-    let bestBlob: Blob | null = null;
-    let bestQuality = 0.98;
-
-    // بحث دقيق للعثور على أعلى جودة بحجم <= targetBytes
-    for (let i = 0; i < 40; i++) {
-      const mid = (low + high) / 2;
-      const candidate = await encode(mid);
-      
-      if (candidate.size > targetBytes) {
-        // الحجم أكبر من المطلوب، نحتاج جودة أقل
-        high = mid;
-      } else {
-        // الحجم <= المطلوب، هذه جودة مقبولة
-        // نحفظها إذا كانت أفضل (أعلى جودة) من السابقة
-        if (!bestBlob || mid > bestQuality) {
-          bestBlob = candidate;
-          bestQuality = mid;
-        }
-        // نحاول جودة أعلى قليلاً
-        low = mid;
-      }
-      
-      // إذا كانت الفجوة صغيرة جداً، نتوقف
-      if (high - low < 0.002) break;
-    }
-
-    // إذا وجدنا blob بحجم <= targetBytes، نعيده
-    if (bestBlob && bestBlob.size <= targetBytes) {
-      return bestBlob;
-    }
-    
-    // إذا لم نجد، نبحث بشكل تدريجي من أعلى جودة إلى أقل
-    // نبدأ من 0.98 وننزل حتى نجد حجم <= targetBytes
-    for (let q = 0.98; q >= 0.7; q -= 0.01) {
-      const candidate = await encode(q);
-      if (candidate.size <= targetBytes) {
-        return candidate;
-      }
-    }
-    
-    // إذا فشل كل شيء، نعيد أقل جودة ممكنة (0.7)
-    // لكن يجب أن نتحقق من الحجم
-    const finalBlob = await encode(0.7);
-    // إذا كان الحجم لا يزال أكبر، نعيده على أي حال (لكن هذا نادر)
-    return finalBlob;
-  } catch (error) {
-    console.error("خطأ في ضغط الصورة:", error);
-    // محاولة أخيرة بجودة متوسطة
-    return await encode(0.8);
+  const highCandidate = await encode(high);
+  if (highCandidate.size < targetBytes) {
+    bestBlob = highCandidate;
   }
+
+  for (let i = 0; i < 40 && high - low > 0.002; i++) {
+    const mid = (low + high) / 2;
+    const candidate = await encode(mid);
+    if (candidate.size < targetBytes) {
+      // هذه الجودة ناجحة (أقل من الهدف) — نحفظها ونجرّب جودة أعلى
+      bestBlob = candidate;
+      low = mid;
+    } else {
+      // ما زال الحجم >= الهدف — نحتاج جودة أقل
+      high = mid;
+    }
+  }
+
+  if (bestBlob) return bestBlob;
+
+  // حتى عند الحد الأدنى للجودة (60%) الحجم لا يزال أكبر من المطلوب — حالة نادرة جداً.
+  // نعيد هذه الجودة كملاذ أخير للحفاظ على الوضوح بدل الاستمرار بخفض الجودة أكثر.
+  return await encode(MIN_QUALITY);
 }
 
 async function createA4Page(
@@ -327,8 +299,8 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
   const [croppedImage1, setCroppedImage1] = useState<string | null>(null);
   const [croppedImage2, setCroppedImage2] = useState<string | null>(null);
   const [croppedImage3, setCroppedImage3] = useState<string | null>(null);
-  const [targetSize, setTargetSize] = useState(18);
-  const [sizeUnit, setSizeUnit] = useState<"KB" | "MB">("KB");
+  const [targetSize, setTargetSize] = useState(1);
+  const [sizeUnit, setSizeUnit] = useState<"KB" | "MB">("MB");
   const [finalSizeBytes, setFinalSizeBytes] = useState<number | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -411,10 +383,35 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
 
   const getPdfSlot = (slot: SlotIndex) => (slot === 1 ? pdfSlot1 : slot === 2 ? pdfSlot2 : pdfSlot3);
 
+  // مركز الدوران/الزوم = نقطة الصورة الظاهرة حالياً في وسط الإطار (crop.x, crop.y).
+  // بما أن react-easy-crop يدوّر ويكبّر الصورة حول مركزها الهندسي دائماً بغض النظر
+  // عن مقدار السحب، نعوّض بتدوير/تحجيم متجه السحب نفسه بنفس المقدار حتى تبقى نفس
+  // النقطة (اللي كانت موجودة بمكان الفريم) هي محور الدوران والزوم دائماً.
+  const prevRotationRef = useRef(0);
+  const prevZoomRef = useRef(1);
+
   // حساب rotation الكلي من baseRotation + sliderRotation
   useEffect(() => {
-    setRotation(baseRotation + sliderRotation);
+    const newRotation = baseRotation + sliderRotation;
+    const deltaDeg = newRotation - prevRotationRef.current;
+    if (deltaDeg !== 0) {
+      const rad = (deltaDeg * Math.PI) / 180;
+      setCrop((c) => ({
+        x: c.x * Math.cos(rad) - c.y * Math.sin(rad),
+        y: c.x * Math.sin(rad) + c.y * Math.cos(rad),
+      }));
+    }
+    prevRotationRef.current = newRotation;
+    setRotation(newRotation);
   }, [baseRotation, sliderRotation]);
+
+  useEffect(() => {
+    const ratio = zoom / prevZoomRef.current;
+    if (ratio !== 1 && Number.isFinite(ratio)) {
+      setCrop((c) => ({ x: c.x * ratio, y: c.y * ratio }));
+    }
+    prevZoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     let raf = 0;
@@ -446,26 +443,16 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
     if (!hasImage) return;
     e.preventDefault();
     e.stopPropagation();
-    const delta = e.deltaY;
-    
-    // تزويم أدق: 2-3 بكسل لكل حركة سكرول
-    setZoom((prev) => {
-      // تقليل السرعة بشكل كبير للحصول على تزويم أكثر دقة
-      const baseSpeed = 0.0002; // تقليل السرعة بشكل كبير
-      
-      // تسريع تدريجي: كلما كان التزويم أكبر، كلما كان التغيير أبطأ
-      const zoomFactor = Math.max(0.3, Math.min(1.0, 1 / Math.sqrt(prev)));
-      
-      // حساب الخطوة بناءً على حجم الحركة (delta) - تقليل التأثير
-      const normalizedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 120);
-      const step = baseSpeed * zoomFactor * normalizedDelta;
-      
-      // تطبيق التغيير بشكل سلس
-      const newZoom = prev - step;
-      
-      // الحدود: من 0.1 إلى 20
-      return Math.min(Math.max(newZoom, 0.1), 20);
-    });
+    // نحدّ من مقدار كل نبضة سكرول (بعض أجهزة التتبّع (trackpad) ترسل قفزات
+    // كبيرة جداً دفعة واحدة أثناء السحب السريع) حتى لا تُحدث قفزة تكبير مفاجئة.
+    const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100);
+
+    // تكبير/تصغير نسبي (أسّي) بدل الجمعي: نفس الإحساس بالسرعة في كل مستويات
+    // التكبير، أكثر سلاسة واتساقاً من صيغة الجذر التربيعي السابقة، وبسرعة أهدأ.
+    const ZOOM_SENSITIVITY = 0.00055;
+    const factor = Math.exp(-delta * ZOOM_SENSITIVITY);
+
+    setZoom((prev) => Math.min(Math.max(prev * factor, 0.1), 20));
   };
 
   useEffect(() => {
@@ -505,6 +492,8 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
     setZoom(mappedZoom);
   };
 
+  // ملاحظة: لا حاجة لإعادة ضبط crop هنا — الـ useEffect الخاص بالدوران (أعلاه)
+  // يعوّض متجه السحب تلقائياً حول نفس نقطة الإطار الحالية عند أي تغيير بالزاوية.
   const rotate90Right = () => {
     setBaseRotation(baseRotation + 90);
     setTargetSliderRotation(0);
@@ -520,14 +509,28 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
   const applyFrame1 = () => {
     setAspect1(frameW1 / frameH1);
   };
-  
+
   const applyFrame2 = () => {
     setAspect2(frameW2 / frameH2);
   };
-  
+
   const applyFrame3 = () => {
     setAspect3(frameW3 / frameH3);
   };
+
+  const applyAllFrames = (width: number, height: number) => {
+    setFrameW1(width);
+    setFrameH1(height);
+    setAspect1(width / height);
+    setFrameW2(width);
+    setFrameH2(height);
+    setAspect2(width / height);
+    setFrameW3(width);
+    setFrameH3(height);
+    setAspect3(width / height);
+  };
+  const presetNewFamilyBooklet = () => applyAllFrames(1000, 750);
+  const presetOldFamilyBooklet = () => applyAllFrames(1600, 1150);
 
   const handleSlotFile = async (file: File, slot: SlotIndex) => {
     setSlotError(null);
@@ -874,7 +877,19 @@ export default function OldPassport({ fileName, onFileNameChange, onComplete }: 
             </button>
           )}
         </div>
-        
+
+        <div className="group">
+          <label>نوع المستند (يضبط أبعاد الصور الأولى والثانية والثالثة معًا):</label>
+          <div className="btn-row">
+            <button className="btn ghost" onClick={presetNewFamilyBooklet}>
+              📘 دفتر عائلة جديد (1000×750)
+            </button>
+            <button className="btn ghost" onClick={presetOldFamilyBooklet}>
+              📗 دفتر عائلة قديم (1600×1150)
+            </button>
+          </div>
+        </div>
+
         {image1Src && !croppedImage1 && (
           <div className="group" style={{ marginTop: "10px" }}>
             <label>

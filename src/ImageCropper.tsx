@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import Cropper, { Area } from "react-easy-crop";
 import { usePdfSource } from "./hooks/usePdfSource";
 import PdfPageControls from "./PdfPageControls";
@@ -43,7 +43,7 @@ async function getCroppedCanvas(
   canvas.height = rotH;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  
+
   // ملء الخلفية باللون الأبيض
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, rotW, rotH);
@@ -59,11 +59,11 @@ async function getCroppedCanvas(
   const octx = output.getContext("2d")!;
   octx.imageSmoothingEnabled = true;
   octx.imageSmoothingQuality = "high";
-  
+
   // ملء الخلفية باللون الأبيض
   octx.fillStyle = "white";
   octx.fillRect(0, 0, outW, outH);
-  
+
   octx.drawImage(canvas, crop.x, crop.y, crop.width, crop.height, 0, 0, outW, outH);
 
   return output;
@@ -85,32 +85,35 @@ async function compressToTarget(canvas: HTMLCanvasElement, targetBytes: number):
       );
     });
 
-  try {
-    const fullQuality = await encode(0.99);
-    if (fullQuality.size <= targetBytes) return fullQuality;
+  // الهدف: أعلى جودة ممكنة بحجم أقل صراحةً من targetBytes (Strictly <) — لا يساوي ولا يتجاوز.
+  // حد أدنى للجودة (60%) للحفاظ على وضوح الصورة، حتى لو تطلّب الأمر تجاوز الحجم المطلوب
+  // بحالات نادرة جداً (صورة كبيرة/معقدة جداً بالنسبة للحجم المطلوب).
+  const MIN_QUALITY = 0.6;
+  let low = MIN_QUALITY;
+  let high = 0.99;
+  let bestBlob: Blob | null = null;
 
-    let low = 0.05;
-    let high = 0.99;
-    let bestBlob: Blob | null = null;
-
-    for (let i = 0; i < 24; i++) {
-      const mid = (low + high) / 2;
-      const candidate = await encode(mid);
-      if (candidate.size > targetBytes) {
-        high = mid;
-      } else {
-        bestBlob = candidate;
-        low = mid;
-        if (targetBytes - candidate.size < 512) break;
-      }
-    }
-
-    if (bestBlob) return bestBlob;
-    return await encode(low);
-  } catch (error) {
-    console.error("خطأ في ضغط الصورة:", error);
-    return await encode(0.7);
+  const highCandidate = await encode(high);
+  if (highCandidate.size < targetBytes) {
+    bestBlob = highCandidate;
   }
+
+  for (let i = 0; i < 40 && high - low > 0.002; i++) {
+    const mid = (low + high) / 2;
+    const candidate = await encode(mid);
+    if (candidate.size < targetBytes) {
+      bestBlob = candidate;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  if (bestBlob) return bestBlob;
+
+  // حتى عند الحد الأدنى للجودة (60%) الحجم لا يزال أكبر من المطلوب — حالة نادرة جداً.
+  // نعيد هذه الجودة كملاذ أخير للحفاظ على الوضوح بدل الاستمرار بخفض الجودة أكثر.
+  return await encode(MIN_QUALITY);
 }
 
 export default function ImageCropper() {
@@ -160,10 +163,35 @@ export default function ImageCropper() {
     reset: resetPdfSource,
   } = usePdfSource();
 
+  // مركز الدوران/الزوم = نقطة الصورة الظاهرة حالياً في وسط الإطار (crop.x, crop.y).
+  // بما أن react-easy-crop يدوّر ويكبّر الصورة حول مركزها الهندسي دائماً بغض النظر
+  // عن مقدار السحب، نعوّض بتدوير/تحجيم متجه السحب نفسه بنفس المقدار حتى تبقى نفس
+  // النقطة (اللي كانت موجودة بمكان الفريم) هي محور الدوران والزوم دائماً.
+  const prevRotationRef = useRef(0);
+  const prevZoomRef = useRef(1);
+
   // حساب rotation الكلي من baseRotation + sliderRotation
   useEffect(() => {
-    setRotation(baseRotation + sliderRotation);
+    const newRotation = baseRotation + sliderRotation;
+    const deltaDeg = newRotation - prevRotationRef.current;
+    if (deltaDeg !== 0) {
+      const rad = (deltaDeg * Math.PI) / 180;
+      setCrop((c) => ({
+        x: c.x * Math.cos(rad) - c.y * Math.sin(rad),
+        y: c.x * Math.sin(rad) + c.y * Math.cos(rad),
+      }));
+    }
+    prevRotationRef.current = newRotation;
+    setRotation(newRotation);
   }, [baseRotation, sliderRotation]);
+
+  useEffect(() => {
+    const ratio = zoom / prevZoomRef.current;
+    if (ratio !== 1 && Number.isFinite(ratio)) {
+      setCrop((c) => ({ x: c.x * ratio, y: c.y * ratio }));
+    }
+    prevZoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     let raf = 0;
@@ -249,25 +277,17 @@ export default function ImageCropper() {
     if (!imageSrc) return;
     e.preventDefault();
     e.stopPropagation();
-    const delta = e.deltaY;
-    
-    setZoom((prev) => {
-      // تزويم أدق: 2-3 بكسل لكل حركة سكرول
-      const baseSpeed = 0.0002; // تقليل السرعة بشكل كبير
-      
-      // تسريع تدريجي: كلما كان التزويم أكبر، كلما كان التغيير أبطأ
-      const zoomFactor = Math.max(0.3, Math.min(1.0, 1 / Math.sqrt(prev)));
-      
-      // حساب الخطوة بناءً على حجم الحركة (delta) - تقليل التأثير
-      const normalizedDelta = Math.sign(delta) * Math.min(Math.abs(delta), 120);
-      const step = baseSpeed * zoomFactor * normalizedDelta;
-      
-      // تطبيق التغيير بشكل سلس
-      const newZoom = prev - step;
-      
-      // الحدود: من 0.1 إلى 20
-      return Math.min(Math.max(newZoom, 0.1), 20);
-    });
+    // نحدّ من مقدار كل نبضة سكرول (بعض أجهزة التتبّع (trackpad) ترسل قفزات
+    // كبيرة جداً دفعة واحدة أثناء السحب السريع) حتى لا تُحدث قفزة تكبير مفاجئة.
+    const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 100);
+
+    // تكبير/تصغير نسبي (أسّي) بدل الجمعي: نفس الإحساس بالسرعة في كل مستويات
+    // التكبير، بنفس الطريقة المستخدمة في محرري الصور الاحترافية — أكثر سلاسة
+    // واتساقاً من صيغة الجذر التربيعي السابقة، وبسرعة أهدأ تشبه تكبير ويندوز.
+    const ZOOM_SENSITIVITY = 0.00055;
+    const factor = Math.exp(-delta * ZOOM_SENSITIVITY);
+
+    setZoom((prev) => Math.min(Math.max(prev * factor, 0.1), 20));
   };
 
   const applyFrame = () => setAspect(frameW / frameH);
@@ -308,7 +328,9 @@ export default function ImageCropper() {
     if (!pdfHasDocument || !pdfBaseName || fileNameEdited) return;
     setFileName(`${pdfBaseName}-page-${pdfCurrentPage}`);
   }, [pdfHasDocument, pdfBaseName, pdfCurrentPage, fileNameEdited]);
-  
+
+  // ملاحظة: لا حاجة لإعادة ضبط crop هنا — الـ useEffect الخاص بالدوران (أعلاه)
+  // يعوّض متجه السحب تلقائياً حول نفس نقطة الإطار الحالية عند أي تغيير بالزاوية.
   const rotate90Right = () => {
     setBaseRotation(baseRotation + 90);
     setTargetSliderRotation(0);
@@ -480,15 +502,15 @@ export default function ImageCropper() {
           <div className="group">
             <label>التدوير السريع:</label>
             <div className="btn-row">
-              <button 
-                className="btn ghost" 
+              <button
+                className="btn ghost"
                 onClick={rotate90Left}
                 title="تدوير 90° يسار"
               >
                 ↺ 90° يسار
               </button>
-              <button 
-                className="btn ghost" 
+              <button
+                className="btn ghost"
                 onClick={rotate90Right}
                 title="تدوير 90° يمين"
               >
@@ -577,8 +599,8 @@ export default function ImageCropper() {
             <span>المعاينة النهائية</span>
             {finalSizeBytes && (
               <small>
-                ({finalSizeBytes >= 1024 * 1024 
-                  ? `${(finalSizeBytes / (1024 * 1024)).toFixed(2)} MB` 
+                ({finalSizeBytes >= 1024 * 1024
+                  ? `${(finalSizeBytes / (1024 * 1024)).toFixed(2)} MB`
                   : `${(finalSizeBytes / 1024).toFixed(1)} KB`} • {frameW}×{frameH})
               </small>
             )}
@@ -595,4 +617,3 @@ export default function ImageCropper() {
     </div>
   );
 }
-
