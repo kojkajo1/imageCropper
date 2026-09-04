@@ -284,7 +284,7 @@ export default function ImageCropper() {
     // تكبير/تصغير نسبي (أسّي) بدل الجمعي: نفس الإحساس بالسرعة في كل مستويات
     // التكبير، بنفس الطريقة المستخدمة في محرري الصور الاحترافية — أكثر سلاسة
     // واتساقاً من صيغة الجذر التربيعي السابقة، وبسرعة أهدأ تشبه تكبير ويندوز.
-    const ZOOM_SENSITIVITY = 0.00055;
+    const ZOOM_SENSITIVITY = 0.0004;
     const factor = Math.exp(-delta * ZOOM_SENSITIVITY);
 
     setZoom((prev) => Math.min(Math.max(prev * factor, 0.1), 20));
@@ -304,7 +304,7 @@ export default function ImageCropper() {
     if (unit !== undefined) setSizeUnit(unit);
   };
   const presetPortrait = () => applyPreset(165, 185, 18, "KB");
-  const presetLarge640 = () => applyPreset(480, 640, 1, "MB");
+  const presetLarge640 = () => applyPreset(480, 640, 300, "KB");
   const presetPassportPage = () => applyPreset(1200, 1700, 1, "MB");
   const presetA4 = () => applyPreset(1733, 2389, 1, "MB");
 
