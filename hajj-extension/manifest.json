@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApAzjoywGo3/HAzjbH4o1rotHXN4Of9nrtBZWfhVQVVhZBXTC/OOMa76d94aOsqCZ4KncXJvCpmfphRqPmNTUMoyGwfPoOcgtUVSbnf4FHRfZMYXxtWNXYlWHPSjcxhTtbja6MvGgJtCTFKuJcEmXQKIsnAMCVneVa5LvmztmduUR6dhwmMt0NXHrXCHW96Gncf2I6LpGlsfiVYJnR6SbEGSjHJqIg6t90twyAUs7oy3VwuQohUQqrJEAOghaPrafSlGt00wKPvjoXvO+L+IwcgWErp4nYUidYin2vz+bpqQrm87cRInuW+JDpesg8lts+g/DdF46HR33mPhZyW5COwIDAQAB",
+  "name": "تحميل بطاقات الحج - hajjregister.com",
+  "description": "تُحمِّل بطاقة التسجيل وبطاقة الطلب العائلي لكل حاجّ من hajjregister.com تلقائيًا، محليًا على جهازك ودون أي خادم خارجي.",
+  "version": "1.0.0",
+  "permissions": ["debugger", "tabs", "scripting"],
+  "host_permissions": ["https://hajjregister.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "http://127.0.0.1:5173/*",
+      "https://*.netlify.app/*"
+    ]
+  },
+  "action": {
+    "default_title": "تحميل بطاقات الحج"
+  }
+}

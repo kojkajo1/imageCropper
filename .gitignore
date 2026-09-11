@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# مفتاح توقيع إضافة hajj-extension — سرّي، ما ينرفع أبدًا
+PRIVATE_KEEP_extension_signing_key/
+
+# ملف الإضافة المضغوط يُولَّد تلقائيًا قبل كل build (npm run build:extension)
+public/hajj-extension.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

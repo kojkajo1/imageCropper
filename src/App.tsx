@@ -5,6 +5,7 @@ import A4Page from "./A4Page";
 import PdfToJpeg from "./PdfToJpeg";
 import MrzReader from "./MrzReader";
 import MergeToPdf from "./MergeToPdf";
+import HajjDownloader from "./HajjDownloader";
 import "./App.css";
 
 function Navigation() {
@@ -58,6 +59,16 @@ function Navigation() {
         قارئ بيانات الجواز (MRZ)
       </Link>
       <Link
+        to="/hajj-download"
+        style={{
+          color: location.pathname === "/hajj-download" ? "#42b7ff" : "#7892b3",
+          textDecoration: "none",
+          fontWeight: location.pathname === "/hajj-download" ? "bold" : "normal"
+        }}
+      >
+        تحميل بطاقات الحج
+      </Link>
+      <Link
         to="/merge-pdf"
         style={{
           color: location.pathname === "/merge-pdf" ? "#42b7ff" : "#7892b3",
@@ -81,6 +92,7 @@ function App() {
           <Route path="/a4" element={<A4Page />} />
           <Route path="/pdf-to-jpeg" element={<PdfToJpeg />} />
           <Route path="/mrz" element={<MrzReader />} />
+          <Route path="/hajj-download" element={<HajjDownloader />} />
           <Route path="/merge-pdf" element={<MergeToPdf />} />
         </Routes>
       </div>
