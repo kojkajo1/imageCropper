@@ -10,8 +10,8 @@ import JSZip from "jszip";
 // إذا أعاد المستخدم تثبيت الإضافة أو ثبّتها على أكثر من جهاز.
 const EXTENSION_ID = "ilonopokaponmcmamhldhgollebodpoi";
 
-// رابط فيديو الشرح على يوتيوب — قيمة مؤقتة إلى حين توفّر الرابط الفعلي
-const YOUTUBE_TUTORIAL_URL = "";
+// رابط فيديو الشرح على يوتيوب
+const YOUTUBE_TUTORIAL_URL = "https://youtu.be/9jseU1w2af0";
 
 const EXTENSION_ZIP_URL = "/hajj-extension.zip";
 const TEMPLATE_URL = "/names_template.xlsx";
