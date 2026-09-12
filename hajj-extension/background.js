@@ -326,7 +326,6 @@ async function runJob(job, port) {
   const total = people.length;
   let done = 0;
 
-  const files = [];
   const reportRows = [];
   const downloadedFamilyFiles = new Set();
 
@@ -363,7 +362,7 @@ async function runJob(job, port) {
             const base64 = await downloadOneFile(tabId, FAMILY_LINK_TEXT, FAMILY_PRINT_TIMEOUT_MS);
             const base = familyNo || name;
             const filename = `${base}_بطاقة الطلب العائلي.pdf`;
-            files.push({ filename, base64 });
+            port.postMessage({ type: "file", filename, base64 });
             familyStatus = "تم";
             if (familyNo) downloadedFamilyFiles.add(familyNo);
           } catch (e) {
@@ -378,7 +377,7 @@ async function runJob(job, port) {
           const base64 = await downloadOneFile(tabId, RECEIPT_LINK_TEXT, RECEIPT_PRINT_TIMEOUT_MS);
           const base = familyNo ? `${familyNo}_${name}` : name;
           const filename = `${base}_بطاقة تسجيل.pdf`;
-          files.push({ filename, base64 });
+          port.postMessage({ type: "file", filename, base64 });
           receiptStatus = "تم";
         } catch (e) {
           receiptStatus = "لم يتم التحميل";
@@ -403,7 +402,7 @@ async function runJob(job, port) {
       });
     }
 
-    port.postMessage({ type: "done", report: reportRows, files });
+    port.postMessage({ type: "done", report: reportRows });
   } catch (e) {
     port.postMessage({ type: "error", message: e && e.message ? e.message : String(e) });
   } finally {

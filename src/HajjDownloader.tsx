@@ -65,7 +65,8 @@ function pingExtension(): Promise<boolean> {
 }
 
 type ProgressMsg = { type: "progress"; done: number; total: number; percent: number; currentName: string };
-type DoneMsg = { type: "done"; report: ReportRow[]; files: ResultFile[] };
+type FileMsg = { type: "file"; filename: string; base64: string };
+type DoneMsg = { type: "done"; report: ReportRow[] };
 type ErrorMsg = { type: "error"; message: string };
 
 function startJob(
@@ -73,18 +74,17 @@ function startJob(
   password: string,
   people: Person[],
   onProgress: (m: ProgressMsg) => void,
+  onFile: (m: FileMsg) => void,
   onDone: (m: DoneMsg) => void,
   onError: (message: string) => void
 ) {
   const chromeObj = getChrome();
   const port = chromeObj.runtime.connect(EXTENSION_ID, { name: "hajj-job" });
-  port.onMessage.addListener((msg: ProgressMsg | DoneMsg | ErrorMsg) => {
+  port.onMessage.addListener((msg: ProgressMsg | FileMsg | DoneMsg | ErrorMsg) => {
     if (msg.type === "progress") onProgress(msg);
+    else if (msg.type === "file") onFile(msg);
     else if (msg.type === "done") onDone(msg);
     else if (msg.type === "error") onError(msg.message);
-  });
-  port.onDisconnect.addListener(() => {
-    // إذا انقطع الاتصال بدون رسالة done/error واضحة
   });
   port.postMessage({ type: "start", email, password, people });
   return port;
@@ -165,6 +165,7 @@ export default function HajjDownloader() {
   const [files, setFiles] = useState<ResultFile[]>([]);
 
   const portRef = useRef<any>(null);
+  const filesRef = useRef<ResultFile[]>([]);
 
   const checkExtension = useCallback(async () => {
     setExtensionStatus("checking");
@@ -232,6 +233,7 @@ export default function HajjDownloader() {
     setErrorMessage("");
     setReport([]);
     setFiles([]);
+    filesRef.current = [];
     setProgress({ type: "progress", done: 0, total: people.length, percent: 0, currentName: "" });
     setJobState("running");
 
@@ -241,11 +243,15 @@ export default function HajjDownloader() {
       people,
       (msg) => setProgress(msg),
       (msg) => {
+        filesRef.current.push({ filename: msg.filename, base64: msg.base64 });
+      },
+      (msg) => {
         setReport(msg.report);
-        setFiles(msg.files);
+        setFiles(filesRef.current);
         setJobState("done");
       },
       (message) => {
+        setFiles(filesRef.current);
         setErrorMessage(message);
         setJobState("error");
       }
@@ -337,7 +343,7 @@ export default function HajjDownloader() {
             <div className="hajj-summary-icon">⚠️</div>
             <h3>حدث خطأ</h3>
             <p className="mrz-error">{errorMessage}</p>
-            {report.length > 0 && (
+            {files.length > 0 && (
               <button className="btn success" onClick={handleDownloadZip}>
                 ⬇️ تحميل النتائج الجزئية (ZIP)
               </button>
