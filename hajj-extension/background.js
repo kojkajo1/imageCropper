@@ -321,10 +321,11 @@ async function downloadOneFile(tabId, linkText, timeoutMs) {
   return captureHtmlAsPdf(html);
 }
 
-async function runJob(job, port) {
+async function runJob(job, port, control) {
   const { email, password, people } = job;
   const total = people.length;
   let done = 0;
+  let stoppedByUser = false;
 
   const reportRows = [];
   const downloadedFamilyFiles = new Set();
@@ -340,6 +341,11 @@ async function runJob(job, port) {
     await login(tabId, email, password);
 
     for (const person of people) {
+      if (control.stopped) {
+        stoppedByUser = true;
+        break;
+      }
+
       const name = String(person.name || "").trim();
       const familyNo = String(person.familyNo || "").trim();
       if (!name) continue;
@@ -373,14 +379,16 @@ async function runJob(job, port) {
           } catch (e) {}
         }
 
-        try {
-          const base64 = await downloadOneFile(tabId, RECEIPT_LINK_TEXT, RECEIPT_PRINT_TIMEOUT_MS);
-          const base = familyNo ? `${familyNo}_${name}` : name;
-          const filename = `${base}_بطاقة تسجيل.pdf`;
-          port.postMessage({ type: "file", filename, base64 });
-          receiptStatus = "تم";
-        } catch (e) {
-          receiptStatus = "لم يتم التحميل";
+        if (!control.stopped) {
+          try {
+            const base64 = await downloadOneFile(tabId, RECEIPT_LINK_TEXT, RECEIPT_PRINT_TIMEOUT_MS);
+            const base = familyNo ? `${familyNo}_${name}` : name;
+            const filename = `${base}_بطاقة تسجيل.pdf`;
+            port.postMessage({ type: "file", filename, base64 });
+            receiptStatus = "تم";
+          } catch (e) {
+            receiptStatus = "لم يتم التحميل";
+          }
         }
       }
 
@@ -402,7 +410,7 @@ async function runJob(job, port) {
       });
     }
 
-    port.postMessage({ type: "done", report: reportRows });
+    port.postMessage({ type: "done", report: reportRows, stoppedByUser });
   } catch (e) {
     port.postMessage({ type: "error", message: e && e.message ? e.message : String(e) });
   } finally {
@@ -417,9 +425,16 @@ async function runJob(job, port) {
 }
 
 chrome.runtime.onConnectExternal.addListener((port) => {
+  const control = { stopped: false };
+
   port.onMessage.addListener((msg) => {
     if (msg && msg.type === "ping") {
       port.postMessage({ type: "pong" });
+      return;
+    }
+
+    if (msg && msg.type === "stop") {
+      control.stopped = true;
       return;
     }
 
@@ -429,7 +444,7 @@ chrome.runtime.onConnectExternal.addListener((port) => {
         return;
       }
       jobRunning = true;
-      runJob(msg, port);
+      runJob(msg, port, control);
     }
   });
 });

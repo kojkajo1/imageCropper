@@ -66,7 +66,7 @@ function pingExtension(): Promise<boolean> {
 
 type ProgressMsg = { type: "progress"; done: number; total: number; percent: number; currentName: string };
 type FileMsg = { type: "file"; filename: string; base64: string };
-type DoneMsg = { type: "done"; report: ReportRow[] };
+type DoneMsg = { type: "done"; report: ReportRow[]; stoppedByUser?: boolean };
 type ErrorMsg = { type: "error"; message: string };
 
 function startJob(
@@ -163,6 +163,9 @@ export default function HajjDownloader() {
   const [errorMessage, setErrorMessage] = useState("");
   const [report, setReport] = useState<ReportRow[]>([]);
   const [files, setFiles] = useState<ResultFile[]>([]);
+  const [wasStopped, setWasStopped] = useState(false);
+  const [stopClicked, setStopClicked] = useState(false);
+  const [zipStage, setZipStage] = useState<"idle" | "preparing" | "downloaded">("idle");
 
   const portRef = useRef<any>(null);
   const filesRef = useRef<ResultFile[]>([]);
@@ -233,6 +236,9 @@ export default function HajjDownloader() {
     setErrorMessage("");
     setReport([]);
     setFiles([]);
+    setWasStopped(false);
+    setStopClicked(false);
+    setZipStage("idle");
     filesRef.current = [];
     setProgress({ type: "progress", done: 0, total: people.length, percent: 0, currentName: "" });
     setJobState("running");
@@ -248,6 +254,7 @@ export default function HajjDownloader() {
       (msg) => {
         setReport(msg.report);
         setFiles(filesRef.current);
+        setWasStopped(!!msg.stoppedByUser);
         setJobState("done");
       },
       (message) => {
@@ -258,9 +265,21 @@ export default function HajjDownloader() {
     );
   }, [people, email, password]);
 
+  const handleStop = useCallback(() => {
+    setStopClicked(true);
+    portRef.current?.postMessage({ type: "stop" });
+  }, []);
+
   const handleDownloadZip = useCallback(async () => {
-    const blob = await buildResultZip(report, files);
-    downloadBlob(blob, "بطاقات الحج.zip");
+    setZipStage("preparing");
+    try {
+      const blob = await buildResultZip(report, files);
+      downloadBlob(blob, "بطاقات الحج.zip");
+      setZipStage("downloaded");
+    } catch (e) {
+      setZipStage("idle");
+      setErrorMessage("تعذّر تجهيز ملف ZIP، يُرجى المحاولة مجددًا.");
+    }
   }, [report, files]);
 
   const successCount = report.filter((r) => r.receiptStatus === "تم" || r.familyStatus === "تم").length;
@@ -322,19 +341,43 @@ export default function HajjDownloader() {
         )}
 
         {jobState === "running" && progress && (
-          <ProgressRing percent={progress.percent} currentName={progress.currentName} done={progress.done} total={progress.total} />
+          <>
+            <ProgressRing percent={progress.percent} currentName={progress.currentName} done={progress.done} total={progress.total} />
+            <div className="btn-row" style={{ justifyContent: "center", margin: "0 24px 24px" }}>
+              {stopClicked ? (
+                <p className="mrz-status">
+                  <span className="mrz-spinner" />
+                  جارٍ الإيقاف بعد إنهاء الشخص الحالي...
+                </p>
+              ) : (
+                <button className="btn ghost" onClick={handleStop}>
+                  ⏹ إيقاف
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         {jobState === "done" && (
           <div className="hajj-summary">
-            <div className="hajj-summary-icon">✅</div>
-            <h3>اكتمل التحميل!</h3>
+            <div className="hajj-summary-icon">{wasStopped ? "⏹" : "✅"}</div>
+            <h3>{wasStopped ? "تم الإيقاف يدويًا" : "اكتمل التحميل!"}</h3>
             <p>
-              تم تحميل ملفات {successCount} من أصل {report.length} حاجًّا بنجاح.
+              تم تحميل ملفات {successCount} من أصل {report.length} حاجًّا بنجاح
+              {wasStopped ? " (قبل معالجة باقي القائمة)" : ""}.
             </p>
-            <button className="btn success" onClick={handleDownloadZip}>
-              ⬇️ تحميل النتائج (ZIP)
-            </button>
+            {zipStage === "idle" && (
+              <button className="btn success" onClick={handleDownloadZip}>
+                ⬇️ تحميل النتائج (ZIP)
+              </button>
+            )}
+            {zipStage === "preparing" && (
+              <p className="mrz-status">
+                <span className="mrz-spinner" />
+                جارٍ تجهيز الملفات للتحميل...
+              </p>
+            )}
+            {zipStage === "downloaded" && <p className="hajj-status-ok">✅ تم التنزيل</p>}
           </div>
         )}
 
@@ -343,11 +386,18 @@ export default function HajjDownloader() {
             <div className="hajj-summary-icon">⚠️</div>
             <h3>حدث خطأ</h3>
             <p className="mrz-error">{errorMessage}</p>
-            {files.length > 0 && (
+            {files.length > 0 && zipStage === "idle" && (
               <button className="btn success" onClick={handleDownloadZip}>
                 ⬇️ تحميل النتائج الجزئية (ZIP)
               </button>
             )}
+            {files.length > 0 && zipStage === "preparing" && (
+              <p className="mrz-status">
+                <span className="mrz-spinner" />
+                جارٍ تجهيز الملفات للتحميل...
+              </p>
+            )}
+            {files.length > 0 && zipStage === "downloaded" && <p className="hajj-status-ok">✅ تم التنزيل</p>}
           </div>
         )}
       </div>
