@@ -16,6 +16,13 @@ const YOUTUBE_TUTORIAL_URL = "https://youtu.be/9jseU1w2af0";
 const EXTENSION_ZIP_URL = "/hajj-extension.zip";
 const TEMPLATE_URL = "/names_template.xlsx";
 
+// تنبيه تحديث: يظهر مرة واحدة لكل متصفح لكل قيمة هنا. عند إصدار تحديث جديد
+// للإضافة، يكفي تغيير هذا النص/التاريخ ليظهر التنبيه من جديد لكل المستخدمين.
+const UPDATE_NOTICE_VERSION = "2026-09-13T13:10";
+const UPDATE_NOTICE_TEXT =
+  "تم تحديث البرنامج بتاريخ 13-09-2026 الساعة 01:10 مساءً. يُرجى إعادة تنزيل الإضافة وتثبيتها من جديد على متصفحك لتحقيق الفائدة الكاملة من الأداة ودون أي أخطاء.";
+const UPDATE_NOTICE_STORAGE_KEY = "hajjDownloaderUpdateNoticeSeen";
+
 // ============================================================================
 // أنواع البيانات
 // ============================================================================
@@ -149,6 +156,26 @@ function downloadBlob(blob: Blob, filename: string) {
 // ============================================================================
 
 export default function HajjDownloader() {
+  const [showUpdateNotice, setShowUpdateNotice] = useState(false);
+
+  useEffect(() => {
+    try {
+      const seen = window.localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY);
+      if (seen !== UPDATE_NOTICE_VERSION) setShowUpdateNotice(true);
+    } catch {
+      setShowUpdateNotice(true);
+    }
+  }, []);
+
+  const dismissUpdateNotice = useCallback(() => {
+    setShowUpdateNotice(false);
+    try {
+      window.localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, UPDATE_NOTICE_VERSION);
+    } catch {
+      // تجاهل — لو تعذّر الحفظ سيظهر التنبيه مجددًا بالمرة القادمة، وهذا غير ضار
+    }
+  }, []);
+
   const [extensionStatus, setExtensionStatus] = useState<ExtensionStatus>("checking");
 
   const [people, setPeople] = useState<Person[] | null>(null);
@@ -286,6 +313,23 @@ export default function HajjDownloader() {
 
   return (
     <div className="page">
+      {showUpdateNotice && (
+        <div className="hajj-modal-overlay" onClick={dismissUpdateNotice}>
+          <div className="hajj-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>📢 تحديث جديد للأداة</h3>
+            <p>{UPDATE_NOTICE_TEXT}</p>
+            <div className="btn-row">
+              <a className="btn success" href={EXTENSION_ZIP_URL} download onClick={dismissUpdateNotice}>
+                ⬇️ تحميل الإضافة المحدَّثة
+              </a>
+              <button className="btn ghost" onClick={dismissUpdateNotice}>
+                فهمت ✅
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="stage">
         {jobState === "idle" && (
           <div className="hajj-install-box">

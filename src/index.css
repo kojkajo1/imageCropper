@@ -589,3 +589,27 @@ html, body, #root, .page { height: 100%; }
 .hajj-summary h3 { margin: 0; color: #cfe9ff; }
 .hajj-summary p { color: #9fb3ce; }
 .hajj-summary .btn { flex: none; padding: 10px 22px; }
+
+.hajj-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 9, 16, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.hajj-modal {
+  background: #101a2c;
+  border: 1px solid #203049;
+  border-radius: 16px;
+  max-width: 460px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.hajj-modal h3 { margin: 0 0 10px; color: #cfe9ff; }
+.hajj-modal p { color: #9fb3ce; font-size: 14px; line-height: 1.8; margin: 0 0 8px; }
+.hajj-modal-date { color: #42b7ff; font-weight: 700; }
+.hajj-modal .btn-row { margin-top: 18px; }
