@@ -259,6 +259,42 @@ async function searchPerson(tabId, name) {
   throw new Error(`لم تتحدّث نتيجة البحث للاسم "${name}" خلال المهلة المحددة (أو لم يُعثر عليه)`);
 }
 
+async function isSessionAlive(tabId) {
+  await gotoPilgrimsList(tabId);
+  return await evalInPage(
+    tabId,
+    `window.__hajjTool.elementExists(${JSON.stringify(XPATH_SEARCH_BOX)})`
+  ).catch(() => false);
+}
+
+async function recoverSessionIfLoggedOut(tabId, email, password) {
+  const alive = await isSessionAlive(tabId).catch(() => false);
+  if (alive) return false;
+  await login(tabId, email, password);
+  return true;
+}
+
+async function searchPersonWithRecovery(tabId, name, email, password) {
+  try {
+    return await searchPerson(tabId, name);
+  } catch (e) {
+    const recovered = await recoverSessionIfLoggedOut(tabId, email, password).catch(() => false);
+    if (!recovered) throw e;
+    return searchPerson(tabId, name);
+  }
+}
+
+async function downloadFileWithRecovery(tabId, name, linkText, timeoutMs, email, password) {
+  try {
+    return await downloadOneFile(tabId, linkText, timeoutMs);
+  } catch (e) {
+    const recovered = await recoverSessionIfLoggedOut(tabId, email, password).catch(() => false);
+    if (!recovered) throw e;
+    await searchPerson(tabId, name);
+    return downloadOneFile(tabId, linkText, timeoutMs);
+  }
+}
+
 async function captureHtmlAsPdf(html) {
   const tempTab = await chrome.tabs.create({ url: "about:blank", active: false });
   const tempTabId = tempTab.id;
@@ -340,12 +376,14 @@ async function runJob(job, port, control) {
 
     await login(tabId, email, password);
 
-    for (const person of people) {
+    let i = 0;
+    for (; i < total; i++) {
       if (control.stopped) {
         stoppedByUser = true;
         break;
       }
 
+      const person = people[i];
       const name = String(person.name || "").trim();
       const familyNo = String(person.familyNo || "").trim();
       if (!name) continue;
@@ -355,7 +393,7 @@ async function runJob(job, port, control) {
       let familyStatus = "لم يتم التحميل";
 
       try {
-        status = await searchPerson(tabId, name);
+        status = await searchPersonWithRecovery(tabId, name, email, password);
       } catch (e) {
         status = "لم يُعثر على الشخص";
       }
@@ -365,7 +403,14 @@ async function runJob(job, port, control) {
           familyStatus = "تم تحميله مسبقًا لعضو آخر من العائلة نفسها";
         } else {
           try {
-            const base64 = await downloadOneFile(tabId, FAMILY_LINK_TEXT, FAMILY_PRINT_TIMEOUT_MS);
+            const base64 = await downloadFileWithRecovery(
+              tabId,
+              name,
+              FAMILY_LINK_TEXT,
+              FAMILY_PRINT_TIMEOUT_MS,
+              email,
+              password
+            );
             const base = familyNo || name;
             const filename = `${base}_بطاقة الطلب العائلي.pdf`;
             port.postMessage({ type: "file", filename, base64 });
@@ -375,13 +420,20 @@ async function runJob(job, port, control) {
             familyStatus = "لم يتم التحميل";
           }
           try {
-            await searchPerson(tabId, name);
+            await searchPersonWithRecovery(tabId, name, email, password);
           } catch (e) {}
         }
 
         if (!control.stopped) {
           try {
-            const base64 = await downloadOneFile(tabId, RECEIPT_LINK_TEXT, RECEIPT_PRINT_TIMEOUT_MS);
+            const base64 = await downloadFileWithRecovery(
+              tabId,
+              name,
+              RECEIPT_LINK_TEXT,
+              RECEIPT_PRINT_TIMEOUT_MS,
+              email,
+              password
+            );
             const base = familyNo ? `${familyNo}_${name}` : name;
             const filename = `${base}_بطاقة تسجيل.pdf`;
             port.postMessage({ type: "file", filename, base64 });
@@ -408,6 +460,19 @@ async function runJob(job, port, control) {
         percent: Math.round((done / total) * 100),
         currentName: name,
       });
+    }
+
+    if (stoppedByUser) {
+      for (let j = i; j < total; j++) {
+        const p = people[j];
+        reportRows.push({
+          name: String(p.name || "").trim(),
+          familyNo: String(p.familyNo || "").trim(),
+          status: "",
+          receiptStatus: "",
+          familyStatus: "",
+        });
+      }
     }
 
     port.postMessage({ type: "done", report: reportRows, stoppedByUser });
